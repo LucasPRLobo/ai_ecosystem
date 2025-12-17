@@ -19,6 +19,12 @@ anthropic>=0.18.0      # For Anthropic Claude models
 numpy>=1.24.0          # For observations and Q-tables
 
 # -----------------------------
+# Visualization
+# -----------------------------
+matplotlib>=3.7.0      # For training curves and plots
+networkx>=3.0          # For interaction graphs
+
+# -----------------------------
 # Development & Testing
 # -----------------------------
 pytest>=7.0.0          # For running tests

@@ -10,6 +10,7 @@ Main modules:
 - simulation: World rules and action resolution
 - ai: Conversation engine and personality system
 - rl: Environment wrapper and learning agents
+- viz: Training visualization and interaction graphs
 - compiler: Natural language prompt compilation
 """
 

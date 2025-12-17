@@ -272,6 +272,10 @@ class PromptedTownEnv:
                     "target": pending_conv.target_id,
                     "intent": pending_conv.intent.value,
                     "outcome_summary": outcome.get_summary(),
+                    "transcript": [
+                        {"speaker": t.speaker_id, "text": t.text}
+                        for t in outcome.transcript
+                    ],
                 })
 
         # Enforce laws
