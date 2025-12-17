@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompted Town</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Prompted Town</h1>
+            <p class="subtitle">Multi-Agent RL Simulation</p>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Left Panel: Controls & Stats -->
+            <aside class="panel controls-panel">
+                <div class="panel-section">
+                    <h2>Controls</h2>
+                    <div class="button-group">
+                        <button id="btn-start" class="btn btn-primary">
+                            <span class="icon">▶</span> Start
+                        </button>
+                        <button id="btn-stop" class="btn btn-secondary" disabled>
+                            <span class="icon">⏸</span> Stop
+                        </button>
+                    </div>
+                    <div class="button-group">
+                        <button id="btn-step" class="btn btn-outline">
+                            <span class="icon">⏭</span> Step
+                        </button>
+                        <button id="btn-reset" class="btn btn-outline">
+                            <span class="icon">↺</span> Reset
+                        </button>
+                    </div>
+                    <div class="button-group">
+                        <button id="btn-force-conv" class="btn btn-accent">
+                            <span class="icon">💬</span> Force Conversation
+                        </button>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Settings</h2>
+                    <div class="setting-row">
+                        <label for="speed-slider">Speed</label>
+                        <input type="range" id="speed-slider" min="0.1" max="2" step="0.1" value="0.8">
+                        <span id="speed-value">0.8s</span>
+                    </div>
+                    <div class="setting-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="ai-toggle">
+                            <span class="checkmark"></span>
+                            AI Conversations
+                        </label>
+                        <span id="ai-status" class="status-badge status-off">OFF</span>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-value" id="stat-day">1</span>
+                            <span class="stat-label">Day</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="stat-tick">0</span>
+                            <span class="stat-label">Tick</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="stat-time">MORNING</span>
+                            <span class="stat-label">Time</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="stat-recruited">0</span>
+                            <span class="stat-label">Recruited</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="stat-arrests">0</span>
+                            <span class="stat-label">Arrests</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="stat-convs">0</span>
+                            <span class="stat-label">Conversations</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Legend -->
+                <div class="panel-section">
+                    <h2>Legend</h2>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <span class="legend-icon location-node"></span>
+                            <span>Location</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon farmer-node"></span>
+                            <span>Farmer</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon guard-node"></span>
+                            <span>Guard</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon rebel-node"></span>
+                            <span>Rebel</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon recruited-node"></span>
+                            <span>Recruited</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-icon jail-node"></span>
+                            <span>Jail</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center: Graph Visualization -->
+            <main class="panel graph-panel">
+                <div class="panel-header">
+                    <h2>Town Map</h2>
+                    <div class="view-toggle">
+                        <button id="btn-graph-view" class="view-btn active">Graph</button>
+                        <button id="btn-list-view" class="view-btn">List</button>
+                    </div>
+                </div>
+                <div id="graph-container" class="graph-container">
+                    <svg id="town-graph"></svg>
+                </div>
+                <div id="agents-container" class="agents-grid" style="display: none;">
+                    <!-- Agent cards will be injected here -->
+                </div>
+                <!-- Tooltip -->
+                <div id="tooltip" class="tooltip"></div>
+            </main>
+
+            <!-- Right Panel: Conversation Log -->
+            <aside class="panel log-panel">
+                <h2>Conversation Log</h2>
+                <div id="conversation-log" class="conversation-log">
+                    <div class="log-placeholder">
+                        Conversations will appear here...
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span id="connection-status" class="connection-indicator disconnected">
+                <span class="dot"></span> Disconnected
+            </span>
+            <span class="version">v0.1.0</span>
+        </footer>
+    </div>
+
+    <script src="/static/graph.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

@@ -11,6 +11,7 @@ Main modules:
 - ai: Conversation engine and personality system
 - rl: Environment wrapper and learning agents
 - viz: Training visualization and interaction graphs
+- gui: Desktop graphical user interface
 - compiler: Natural language prompt compilation
 """
 

@@ -25,6 +25,12 @@ matplotlib>=3.7.0      # For training curves and plots
 networkx>=3.0          # For interaction graphs
 
 # -----------------------------
+# Web UI
+# -----------------------------
+flask>=2.0.0           # Web framework
+flask-socketio>=5.0.0  # WebSocket support for real-time updates
+
+# -----------------------------
 # Development & Testing
 # -----------------------------
 pytest>=7.0.0          # For running tests
