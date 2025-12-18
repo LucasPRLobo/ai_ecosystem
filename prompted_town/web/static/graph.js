@@ -449,8 +449,10 @@ class TownGraph {
         const enterNodes = nodeSelection.enter()
             .append('g')
             .attr('class', 'agent-node')
+            .attr('cursor', 'pointer')
             .on('mouseover', (event, d) => this.showTooltip(event, d))
-            .on('mouseout', () => this.hideTooltip());
+            .on('mouseout', () => this.hideTooltip())
+            .on('click', (event, d) => this.onAgentClick(event, d));
 
         // Agent circle
         enterNodes.append('circle')
@@ -470,9 +472,21 @@ class TownGraph {
         // Merge and update
         const allNodes = enterNodes.merge(nodeSelection);
 
-        allNodes.transition()
-            .duration(300)
-            .attr('transform', d => `translate(${d.x}, ${d.y})`);
+        // Only animate if position actually changed
+        allNodes.each(function(d) {
+            const node = d3.select(this);
+            const currentTransform = node.attr('transform');
+            const newTransform = `translate(${d.x}, ${d.y})`;
+
+            // Skip transition if position hasn't changed significantly
+            if (currentTransform && currentTransform !== newTransform) {
+                node.transition()
+                    .duration(300)
+                    .attr('transform', newTransform);
+            } else if (!currentTransform) {
+                node.attr('transform', newTransform);
+            }
+        });
 
         allNodes.select('circle')
             .attr('fill', d => this.getAgentColor(d))
@@ -586,6 +600,21 @@ class TownGraph {
                 }
             }
         });
+    }
+
+    // Handle click on agent node
+    onAgentClick(event, d) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        // Hide tooltip to prevent visual glitches
+        this.hideTooltip();
+
+        // Dispatch custom event that app.js will listen for
+        const customEvent = new CustomEvent('agentSelected', {
+            detail: { agentId: d.id, agent: d.agent }
+        });
+        window.dispatchEvent(customEvent);
     }
 
     // Highlight a conversation between two agents

@@ -52,6 +52,22 @@ from .world_state import (
     create_default_world,
 )
 
+# Traits system
+from .traits import (
+    AgentTrait,
+    AgentTraits,
+    AGENT_TEMPLATES,
+    get_agent_template,
+    PlaceTrait,
+    PlaceTraits,
+    PLACE_TEMPLATES,
+    get_place_template,
+    DEFAULT_LOCATION_TRAITS,
+    get_default_location_traits,
+    RecruitmentStyle,
+    RecruitmentConfig,
+)
+
 __all__ = [
     # Enums
     "Location",
@@ -85,4 +101,17 @@ __all__ = [
     "Event",
     "WorldState",
     "create_default_world",
+    # Traits
+    "AgentTrait",
+    "AgentTraits",
+    "AGENT_TEMPLATES",
+    "get_agent_template",
+    "PlaceTrait",
+    "PlaceTraits",
+    "PLACE_TEMPLATES",
+    "get_place_template",
+    "DEFAULT_LOCATION_TRAITS",
+    "get_default_location_traits",
+    "RecruitmentStyle",
+    "RecruitmentConfig",
 ]

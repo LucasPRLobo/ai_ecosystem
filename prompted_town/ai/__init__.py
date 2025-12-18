@@ -52,6 +52,17 @@ from .outcome_parser import (
     parse_conversation_outcome,
 )
 
+# Agent Mind (Independent AI consciousness)
+from .agent_mind import (
+    ConversationMemory,
+    AgentKnowledge,
+    PersonalGrievance,
+    AgentMind,
+    MindfulConversation,
+    MindfulConversationResult,
+    AgentMindManager,
+)
+
 __all__ = [
     # LLM Backend
     "Message",
@@ -82,4 +93,12 @@ __all__ = [
     "RuleBasedOutcomeParser",
     "LLMOutcomeParser",
     "parse_conversation_outcome",
+    # Agent Mind
+    "ConversationMemory",
+    "AgentKnowledge",
+    "PersonalGrievance",
+    "AgentMind",
+    "MindfulConversation",
+    "MindfulConversationResult",
+    "AgentMindManager",
 ]

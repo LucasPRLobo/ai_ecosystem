@@ -51,6 +51,13 @@ socket.on('step_complete', (state) => {
             }
         });
     }
+
+    // Handle arrests from this step
+    if (state.step_arrests && state.step_arrests.length > 0) {
+        state.step_arrests.forEach(arrest => {
+            addArrestEntry(arrest);
+        });
+    }
 });
 
 socket.on('started', () => {
@@ -81,6 +88,14 @@ socket.on('conversation', (data) => {
     }
     if (data.state) {
         updateUI(data.state);
+    }
+});
+
+socket.on('agent_thoughts', (data) => {
+    if (data.thoughts && data.thoughts.length > 0) {
+        data.thoughts.forEach(thought => {
+            addThoughtEntry(thought);
+        });
     }
 });
 
@@ -182,6 +197,12 @@ function createAgentCard(agent) {
         </div>
         ${getStatusTags(agent)}
     `;
+
+    // Add click handler to open editor
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => {
+        openAgentEditor(agent.id);
+    });
 
     return card;
 }
@@ -303,6 +324,75 @@ function addLogEntry(entry) {
     log.insertBefore(div, log.firstChild);
 }
 
+function addThoughtEntry(thought) {
+    const log = document.getElementById('conversation-log');
+
+    // Remove placeholder if present
+    const placeholder = log.querySelector('.log-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'conversation-entry thought-entry';
+
+    // Get role-based styling class
+    const roleClass = thought.role || 'farmer';
+
+    entry.innerHTML = `
+        <div class="thought-header">
+            <span class="thought-agent ${roleClass}">${thought.agent_name}</span>
+            <span class="thought-label">💭 thinking</span>
+        </div>
+        <div class="thought-content">
+            <em>"${thought.thought}"</em>
+        </div>
+    `;
+
+    log.insertBefore(entry, log.firstChild);
+
+    // Limit log entries
+    while (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+    }
+}
+
+function addArrestEntry(arrest) {
+    const log = document.getElementById('conversation-log');
+
+    // Remove placeholder if present
+    const placeholder = log.querySelector('.log-placeholder');
+    if (placeholder) placeholder.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'conversation-entry arrest-entry';
+
+    const suspicionPercent = arrest.suspicion_level
+        ? Math.round(arrest.suspicion_level * 100)
+        : '??';
+
+    entry.innerHTML = `
+        <div class="arrest-header">
+            <span class="arrest-icon">⚔️</span>
+            <span class="arrest-title">ARREST</span>
+        </div>
+        <div class="arrest-content">
+            <strong>${arrest.guard_name || 'A guard'}</strong> arrested
+            <strong>${arrest.arrested_name || arrest.arrested_id}</strong>
+            at ${arrest.location || 'unknown location'}
+        </div>
+        <div class="arrest-details">
+            Suspicion level: ${suspicionPercent}%
+            ${arrest.reason ? ` • Reason: ${arrest.reason}` : ''}
+        </div>
+    `;
+
+    log.insertBefore(entry, log.firstChild);
+
+    // Limit log entries
+    while (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+    }
+}
+
 // =============================================================================
 // Button State
 // =============================================================================
@@ -341,6 +431,10 @@ document.getElementById('btn-reset').addEventListener('click', () => {
 
 document.getElementById('btn-force-conv').addEventListener('click', () => {
     socket.emit('force_conversation');
+});
+
+document.getElementById('btn-thoughts').addEventListener('click', () => {
+    socket.emit('generate_thoughts');
 });
 
 document.getElementById('speed-slider').addEventListener('input', (e) => {
@@ -385,11 +479,225 @@ document.getElementById('btn-graph-view').addEventListener('click', () => setVie
 document.getElementById('btn-list-view').addEventListener('click', () => setView('list'));
 
 // =============================================================================
+// Agent Editor
+// =============================================================================
+
+let currentEditingAgent = null;
+let availableTemplates = {};
+
+// Fetch available templates on load
+async function loadTemplates() {
+    try {
+        const res = await fetch('/api/templates');
+        const data = await res.json();
+        availableTemplates = data.agent_templates || {};
+
+        // Populate template dropdown
+        const select = document.getElementById('template-select');
+        select.innerHTML = '<option value="">-- Select Template --</option>';
+        Object.entries(availableTemplates).forEach(([name, template]) => {
+            const displayName = name.replace(/_/g, ' ').replace(/\bthe\b/i, 'The');
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = displayName;
+            option.title = template.description;
+            select.appendChild(option);
+        });
+    } catch (err) {
+        console.error('Failed to load templates:', err);
+    }
+}
+
+// Open the editor for an agent
+async function openAgentEditor(agentId) {
+    try {
+        const res = await fetch(`/api/agent/${agentId}`);
+        if (!res.ok) {
+            console.error('Failed to fetch agent details');
+            return;
+        }
+
+        const agent = await res.json();
+        currentEditingAgent = agent;
+
+        // Populate editor fields
+        document.getElementById('editor-agent-name').textContent = agent.name;
+
+        const roleBadge = document.getElementById('editor-agent-role');
+        roleBadge.textContent = agent.role;
+        roleBadge.className = `role-badge ${agent.role}`;
+
+        const factionBadge = document.getElementById('editor-agent-faction');
+        factionBadge.textContent = agent.faction;
+        factionBadge.className = `faction-badge ${agent.faction}`;
+
+        document.getElementById('editor-agent-description').textContent =
+            agent.personality?.core_identity || '';
+
+        // Show/hide recruitment section for rebels
+        const recruitSection = document.getElementById('recruitment-section');
+        if (agent.faction === 'rebel') {
+            recruitSection.style.display = 'block';
+            document.getElementById('recruitment-style-select').value =
+                agent.recruitment_style || 'moderate';
+        } else {
+            recruitSection.style.display = 'none';
+        }
+
+        // Populate trait sliders
+        if (agent.traits) {
+            Object.entries(agent.traits).forEach(([trait, value]) => {
+                const slider = document.getElementById(`trait-${trait}`);
+                const valSpan = document.getElementById(`val-${trait}`);
+                if (slider) {
+                    slider.value = value;
+                    if (valSpan) valSpan.textContent = value.toFixed(1);
+                }
+            });
+        }
+
+        // Update description
+        document.getElementById('traits-description').textContent =
+            agent.traits_description || 'Balanced personality';
+
+        // Show the modal
+        document.getElementById('agent-editor').style.display = 'flex';
+
+    } catch (err) {
+        console.error('Error opening agent editor:', err);
+    }
+}
+
+// Close the editor
+function closeAgentEditor() {
+    document.getElementById('agent-editor').style.display = 'none';
+    currentEditingAgent = null;
+}
+
+// Save trait changes
+async function saveTraits() {
+    if (!currentEditingAgent) return;
+
+    const traits = {};
+    const traitNames = ['boldness', 'discretion', 'warmth', 'trust', 'compliance', 'ambition', 'resilience', 'grievance'];
+
+    traitNames.forEach(trait => {
+        const slider = document.getElementById(`trait-${trait}`);
+        if (slider) {
+            traits[trait] = parseFloat(slider.value);
+        }
+    });
+
+    try {
+        const res = await fetch(`/api/agent/${currentEditingAgent.id}/traits`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ traits })
+        });
+
+        const data = await res.json();
+        if (data.status === 'ok') {
+            document.getElementById('traits-description').textContent = data.description;
+            addLogEntry({ type: 'system', message: `Updated traits for ${currentEditingAgent.name}` });
+        }
+    } catch (err) {
+        console.error('Error saving traits:', err);
+    }
+}
+
+// Apply a template
+async function applyTemplate() {
+    if (!currentEditingAgent) return;
+
+    const templateName = document.getElementById('template-select').value;
+    if (!templateName) return;
+
+    try {
+        const res = await fetch(`/api/agent/${currentEditingAgent.id}/template`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ template: templateName })
+        });
+
+        const data = await res.json();
+        if (data.status === 'ok') {
+            // Update sliders with new values
+            Object.entries(data.traits).forEach(([trait, value]) => {
+                const slider = document.getElementById(`trait-${trait}`);
+                const valSpan = document.getElementById(`val-${trait}`);
+                if (slider) {
+                    slider.value = value;
+                    if (valSpan) valSpan.textContent = value.toFixed(1);
+                }
+            });
+            document.getElementById('traits-description').textContent = data.description;
+            addLogEntry({ type: 'system', message: `Applied "${templateName.replace(/_/g, ' ')}" template to ${currentEditingAgent.name}` });
+        }
+    } catch (err) {
+        console.error('Error applying template:', err);
+    }
+}
+
+// Update recruitment style
+async function updateRecruitmentStyle() {
+    if (!currentEditingAgent) return;
+
+    const style = document.getElementById('recruitment-style-select').value;
+
+    try {
+        const res = await fetch(`/api/agent/${currentEditingAgent.id}/recruitment_style`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ style })
+        });
+
+        const data = await res.json();
+        if (data.status === 'ok') {
+            addLogEntry({ type: 'system', message: `Set ${currentEditingAgent.name}'s recruitment style to ${style}` });
+        }
+    } catch (err) {
+        console.error('Error updating recruitment style:', err);
+    }
+}
+
+// Event listeners for editor
+document.getElementById('editor-close').addEventListener('click', closeAgentEditor);
+document.getElementById('btn-save-traits').addEventListener('click', saveTraits);
+document.getElementById('btn-apply-template').addEventListener('click', applyTemplate);
+document.getElementById('recruitment-style-select').addEventListener('change', updateRecruitmentStyle);
+
+// Close modal when clicking overlay
+document.getElementById('agent-editor').addEventListener('click', (e) => {
+    if (e.target.id === 'agent-editor') {
+        closeAgentEditor();
+    }
+});
+
+// Update slider value displays
+document.querySelectorAll('.trait-slider').forEach(slider => {
+    slider.addEventListener('input', (e) => {
+        const trait = e.target.id.replace('trait-', '');
+        const valSpan = document.getElementById(`val-${trait}`);
+        if (valSpan) {
+            valSpan.textContent = parseFloat(e.target.value).toFixed(1);
+        }
+    });
+});
+
+// Listen for agent selection from graph
+window.addEventListener('agentSelected', (e) => {
+    openAgentEditor(e.detail.agentId);
+});
+
+// =============================================================================
 // Initialize
 // =============================================================================
 
 // Initialize graph after DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // Load templates for agent editor
+    loadTemplates();
+
     // Small delay to ensure graph container is sized
     setTimeout(() => {
         if (!window.townGraph) {
